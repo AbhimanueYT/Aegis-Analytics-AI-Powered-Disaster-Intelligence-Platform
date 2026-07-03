@@ -1,39 +1,54 @@
-"""Retrieval + Gemini generation for the AI Decision Assistant."""
-import os
-import google.generativeai as genai
-from dotenv import load_dotenv
-from ai.rag.vector_store import VectorStore
+"""
+Retrieves relevant disaster management chunks from ChromaDB.
+"""
 
-load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+from sentence_transformers import SentenceTransformer
+from ai.rag.vector_store import get_vector_store
 
-SYSTEM_PROMPT = """You are Aegis Analytics' AI Decision Assistant, helping emergency 
-responders and city administrators make disaster response decisions. Use the provided 
-context (SOPs, guidelines, historical reports) to answer accurately. If context is 
-insufficient, say so rather than guessing. Be concise and actionable."""
+EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 
-class Retriever:
+
+class DisasterRetriever:
+
     def __init__(self):
-        self.vs = VectorStore()
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.collection = get_vector_store()
 
-    def retrieve_context(self, query: str, n_results: int = 5) -> str:
-        results = self.vs.query(query, n_results=n_results)
-        docs = results.get("documents", [[]])[0]
-        return "\n\n---\n\n".join(docs) if docs else "No relevant context found."
+    def search(self, question, top_k=5):
 
-    def answer_query(self, query: str) -> dict:
-        context = self.retrieve_context(query)
-        prompt = f"{SYSTEM_PROMPT}\n\nContext:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-        response = self.model.generate_content(prompt)
-        return {
-            "query": query,
-            "answer": response.text,
-            "context_used": context
-        }
+        # Convert query → embedding
+        query_embedding = EMBEDDING_MODEL.encode(question).tolist()
+
+        # Query ChromaDB
+        results = self.collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k
+        )
+
+        response = []
+
+        for doc, metadata in zip(
+            results["documents"][0],
+            results["metadatas"][0]
+        ):
+            response.append({
+                "text": doc,
+                "source": metadata.get("source", "unknown"),
+                "page": metadata.get("page", -1)
+            })
+
+        return response
 
 
 if __name__ == "__main__":
-    retriever = Retriever()
-    result = retriever.answer_query("Which areas are at highest flood risk?")
-    print(result["answer"])
+
+    retriever = DisasterRetriever()
+
+    results = retriever.search(
+        "What should be done before a flood?"
+    )
+
+    for r in results:
+        print("\n" + "=" * 80)
+        print("SOURCE:", r["source"])
+        print("PAGE:", r["page"])
+        print("\n", r["text"])

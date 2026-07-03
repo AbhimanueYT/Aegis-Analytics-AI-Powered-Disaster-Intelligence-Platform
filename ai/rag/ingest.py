@@ -1,41 +1,111 @@
-"""Loads SOPs / guidelines / historical reports, chunks them, and stores in ChromaDB."""
+"""
+Reads PDF documents, splits them into chunks, generates embeddings,
+and stores them in ChromaDB.
+"""
+
 import os
-import glob
-from ai.rag.vector_store import VectorStore
+import re
+import uuid
 
-DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "docs", "sops")
+import wordninja
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from sentence_transformers import SentenceTransformer
 
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
-    words = text.split()
-    chunks = []
-    i = 0
-    while i < len(words):
-        chunk = " ".join(words[i:i + chunk_size])
-        chunks.append(chunk)
-        i += chunk_size - overlap
-    return chunks
+from ai.rag.vector_store import get_vector_store
 
-def ingest_directory(docs_dir: str = DOCS_DIR):
-    vs = VectorStore()
-    files = glob.glob(os.path.join(docs_dir, "*.txt")) + glob.glob(os.path.join(docs_dir, "*.md"))
 
-    if not files:
-        print(f"No files found in {docs_dir}. Add SOP/guideline .txt or .md files there.")
-        return
+EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 
-    all_chunks, metadatas, ids = [], [], []
-    for filepath in files:
-        filename = os.path.basename(filepath)
-        with open(filepath, "r", encoding="utf-8") as f:
-            text = f.read()
-        chunks = chunk_text(text)
-        for idx, chunk in enumerate(chunks):
-            all_chunks.append(chunk)
-            metadatas.append({"source": filename, "chunk_index": idx})
-            ids.append(f"{filename}_{idx}")
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1200,
+    chunk_overlap=150,
+    separators=["\n\n", "\n", ". ", " ", ""]
+)
 
-    vs.add_documents(all_chunks, metadatas, ids)
-    print(f"Ingested {len(all_chunks)} chunks from {len(files)} files.")
+# Matches a short 1-2 char syllable followed by 2+ single letters/digits, each
+# separated by a space, e.g. "na t i o n a l" -> "national", "Su m m a r y" -> "Summary".
+# Also covers fully spaced-out words like "D I S A S T E R" (prefix length 1).
+# Requires 2+ trailing singles so normal short words ("a", "of", "is") next to
+# another word are never merged.
+_BROKEN_WORD_RE = re.compile(r"\b\w{1,2}(?:[ \t]\w){2,}\b")
+_WHITESPACE_RE = re.compile(r"[ \t]+")
+_BLANK_LINES_RE = re.compile(r"\n\s*\n+")
+
+
+def _rejoin_broken_word(match: "re.Match") -> str:
+    merged = match.group(0).replace(" ", "").replace("\t", "")
+    # wordninja resolves ambiguous runs back into real words/word boundaries,
+    # e.g. "Summaryof" -> "Summary of" (regex alone can't tell where one
+    # letter-spaced word ends and the next begins).
+    return " ".join(wordninja.split(merged))
+
+
+def clean_extracted_text(text: str) -> str:
+    """Fix OCR/PDF extraction spacing artifacts without altering content."""
+
+    if not text:
+        return text
+
+    # Collapse "Di S a S t e r" -> "Disaster" (letters split by single spaces)
+    text = _BROKEN_WORD_RE.sub(_rejoin_broken_word, text)
+
+    # Collapse multiple spaces/tabs into one
+    text = _WHITESPACE_RE.sub(" ", text)
+
+    # Collapse random blank lines into a single newline
+    text = _BLANK_LINES_RE.sub("\n", text)
+
+    # Trim trailing spaces on each line
+    text = "\n".join(line.strip() for line in text.split("\n"))
+
+    return text.strip()
+
+
+def ingest_documents():
+
+    collection = get_vector_store()
+
+    folder = "ai/rag/documents"
+
+    for filename in os.listdir(folder):
+
+        if not filename.endswith(".pdf"):
+            continue
+
+        print(f"Processing {filename}")
+
+        filepath = os.path.join(folder, filename)
+
+        loader = PyPDFLoader(filepath)
+
+        pages = loader.load()
+
+        for page_number, page in enumerate(pages, start=1):
+
+            cleaned_text = clean_extracted_text(page.page_content)
+
+            chunks = splitter.split_text(cleaned_text)
+
+            for chunk in chunks:
+
+                embedding = EMBEDDING_MODEL.encode(chunk).tolist()
+
+                collection.add(
+                    ids=[str(uuid.uuid4())],
+                    documents=[chunk],
+                    embeddings=[embedding],
+                    metadatas=[
+                        {
+                            "source": filename,
+                            "page": page_number,
+                            "length": len(chunk)
+                        }
+                    ]
+                )
+
+    print("Documents indexed successfully.")
+
 
 if __name__ == "__main__":
-    ingest_directory()
+    ingest_documents()
