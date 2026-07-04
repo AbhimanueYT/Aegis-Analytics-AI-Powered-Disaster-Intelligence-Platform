@@ -11,23 +11,27 @@ import Footer from "@/components/Footer/Footer";
 
 export default function Home() {
   return (
-    <div className="bg-[#f6f3ee] min-h-screen">
+    <div className="flex min-h-screen bg-[#f6f3ee]">
 
-      <Navbar />
+      {/* Sidebar */}
       <Sidebar />
 
-      <main className="ml-64 pt-20">
+      {/* Main Content Container */}
+      <div className="flex flex-1 flex-col">
+        {/* Navbar */}
+        <Navbar />
 
-        <Hero />
-        <Cards />
-        <Charts />
-        <Map />
-        <Alerts />
-        <Shelter />
-
-        <Footer />
-
-      </main>
+        {/* Dashboard Content */}
+        <main className="flex-1 p-8 space-y-8">
+          <Hero />
+          <Cards />
+          <Charts />
+          <Map />
+          <Alerts />
+          <Shelter />
+          <Footer />
+        </main>
+      </div>
 
     </div>
   );
