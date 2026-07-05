@@ -1,8 +1,10 @@
 # Python
 .env
 venv/
+.venv/
 __pycache__/
 *.pyc
+*.db
 ai/data/chroma_db/
 *.zip
 

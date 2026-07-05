@@ -108,7 +108,7 @@ def chat_rag(input_data: ChatInput):
         
         if gemini_api_key:
             try:
-                model = genai.GenerativeModel("gemini-1.5-flash")
+                model = genai.GenerativeModel("gemini-2.5-flash")
                 prompt = (
                     "You are Aegis AI, the intelligent disaster management assistant for Aegis Analytics.\n"
                     "Use the following retrieved official disaster guidelines and context to answer the user's question.\n"

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from services.disaster_service import get_disasters
+from backend.services.disaster_service import get_disasters
 
 router = APIRouter()
 
