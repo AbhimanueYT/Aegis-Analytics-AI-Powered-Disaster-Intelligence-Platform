@@ -151,3 +151,83 @@ export async function submitIncident(data: IncidentCreateData): Promise<Incident
     return null;
   }
 }
+
+export interface PredictionFeatures {
+  MonsoonIntensity: number;
+  TopographyDrainage: number;
+  RiverManagement: number;
+  Deforestation: number;
+  Urbanization: number;
+  ClimateChange: number;
+  DamsQuality: number;
+  Siltation: number;
+  AgriculturalPractices: number;
+  Encroachments: number;
+  IneffectiveDisasterPreparedness: number;
+  DrainageSystems: number;
+  CoastalVulnerability: number;
+  Landslides: number;
+  Watersheds: number;
+  DeterioratingInfrastructure: number;
+  PopulationScore: number;
+  WetlandLoss: number;
+  InadequatePlanning: number;
+  PoliticalFactors: number;
+}
+
+export interface PredictionResponse {
+  prediction: {
+    flood_probability: number;
+    risk_level: string;
+    confidence: number;
+    top_factors: Array<{ factor: string; importance: number }>;
+  };
+  priority: string;
+  recommended_actions: string[];
+}
+
+export interface ChatResponse {
+  answer: string;
+  used_gemini: boolean;
+  sources: Array<{ text: string; source: string; page: number }>;
+}
+
+export async function submitPrediction(features: PredictionFeatures): Promise<PredictionResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/predict`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(features),
+    });
+    if (!res.ok) throw new Error("Failed to run prediction");
+    return await res.json();
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export interface ChatMessage {
+  role: string;
+  message: string;
+}
+
+export async function submitChat(question: string, history: ChatMessage[] = []): Promise<ChatResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ question, history }),
+    });
+    if (!res.ok) throw new Error("Failed to send chat message");
+    return await res.json();
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
