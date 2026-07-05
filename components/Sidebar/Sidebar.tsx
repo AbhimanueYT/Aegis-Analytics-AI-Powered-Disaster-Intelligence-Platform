@@ -88,9 +88,9 @@ export default function Sidebar() {
 
           <div className="flex items-center gap-3">
 
-            <div className="w-12 h-12 rounded-xl bg-[#26282D] flex items-center justify-center shadow-md">
+            <div className="w-12 h-12 rounded-xl bg-[#26282D] flex items-center justify-center shadow-md overflow-hidden">
 
-              <ShieldAlert className="text-[#F7F3EC]" size={24} />
+              <img src="/logo.png" alt="Aegis Analytics" className="w-full h-full object-cover" />
 
             </div>
 
