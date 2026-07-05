@@ -8,37 +8,19 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-const shelters = [
-  {
-    id: 1,
-    name: "Hyderabad Relief Centre",
-    location: "Hyderabad, Telangana",
-    capacity: 850,
-    available: 342,
-    contact: "+91 98765 43210",
-    status: "Open",
-  },
-  {
-    id: 2,
-    name: "Visakhapatnam Shelter",
-    location: "Visakhapatnam, Andhra Pradesh",
-    capacity: 620,
-    available: 188,
-    contact: "+91 91234 56789",
-    status: "Open",
-  },
-  {
-    id: 3,
-    name: "Chennai Emergency Camp",
-    location: "Chennai, Tamil Nadu",
-    capacity: 1000,
-    available: 96,
-    contact: "+91 99887 66554",
-    status: "Almost Full",
-  },
-];
+import { useState, useEffect } from "react";
+import { fetchShelters, ShelterData } from "@/app/services/api";
 
 export default function Shelter() {
+  const [shelters, setShelters] = useState<ShelterData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchShelters().then((data) => {
+      setShelters(data);
+      setLoading(false);
+    });
+  }, []);
   return (
     <section className="bg-[#32353B] rounded-3xl p-6 border border-[#40444D]">
 
@@ -63,7 +45,12 @@ export default function Shelter() {
 
       <div className="space-y-5">
 
-        {shelters.map((shelter) => (
+        {loading ? (
+          <div className="text-gray-400 text-center py-6">Loading shelters...</div>
+        ) : shelters.length === 0 ? (
+          <div className="text-gray-400 text-center py-6">No shelters found.</div>
+        ) : (
+          shelters.map((shelter) => (
 
           <div
             key={shelter.id}
@@ -175,7 +162,7 @@ export default function Shelter() {
 
           </div>
 
-        ))}
+        )))}
 
       </div>
 

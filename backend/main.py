@@ -1,12 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.api import disaster, prediction
+from backend.database.connection import init_db
 
 app = FastAPI(
     title="Aegis Analytics API",
     description="Backend API for Disaster Intelligence Platform",
     version="1.0.0"
 )
+
+@app.on_event("startup")
+def startup_event():
+    # Initialize and seed database
+    init_db()
 
 # Enable CORS for frontend integration
 app.add_middleware(

@@ -8,49 +8,64 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
-const cards = [
-  {
-    title: "Active Alerts",
-    value: "18",
-    change: "+12%",
-    subtitle: "Since yesterday",
-    icon: AlertTriangle,
-    tone: "red",
-  },
-  {
-    title: "System Health",
-    value: "98%",
-    change: "+2%",
-    subtitle: "All systems stable",
-    icon: ShieldCheck,
-    tone: "green",
-  },
-  {
-    title: "Response Teams",
-    value: "24",
-    change: "+5%",
-    subtitle: "On standby",
-    icon: Users,
-    tone: "blue",
-  },
-  {
-    title: "Live Monitoring",
-    value: "Active",
-    change: "Real-time",
-    subtitle: "Tracking enabled",
-    icon: Activity,
-    tone: "amber",
-  },
-];
-
-const toneStyles: Record<string, string> = {
-  red: "from-red-50 to-red-100 border-red-200 text-red-700",
-  green: "from-green-50 to-green-100 border-green-200 text-green-700",
-  blue: "from-blue-50 to-blue-100 border-blue-200 text-blue-700",
-  amber: "from-yellow-50 to-yellow-100 border-yellow-200 text-yellow-700",
-};
+import { useState, useEffect } from "react";
+import { fetchAlerts } from "@/app/services/api";
 
 export default function Cards() {
+  const [activeAlertsCount, setActiveAlertsCount] = useState(18);
+  const [criticalCount, setCriticalCount] = useState(0);
+
+  useEffect(() => {
+    fetchAlerts().then((alerts) => {
+      if (alerts && alerts.length > 0) {
+        setActiveAlertsCount(alerts.length);
+        const critical = alerts.filter(a => a.severity === "Critical").length;
+        setCriticalCount(critical);
+      }
+    });
+  }, []);
+
+  const cards = [
+    {
+      title: "Active Alerts",
+      value: activeAlertsCount.toString(),
+      change: `+${criticalCount} Critical`,
+      subtitle: "Emergency monitoring",
+      icon: AlertTriangle,
+      tone: activeAlertsCount > 0 ? "red" : "green",
+    },
+    {
+      title: "System Health",
+      value: activeAlertsCount > 2 ? "Warning" : "Healthy",
+      change: "Stable",
+      subtitle: activeAlertsCount > 2 ? "High alert load" : "All services normal",
+      icon: ShieldCheck,
+      tone: activeAlertsCount > 2 ? "amber" : "green",
+    },
+    {
+      title: "Response Teams",
+      value: "24",
+      change: "+5%",
+      subtitle: "On standby dispatch",
+      icon: Users,
+      tone: "blue",
+    },
+    {
+      title: "Live Monitoring",
+      value: "Active",
+      change: "Real-time",
+      subtitle: "ChromaDB & XGBoost",
+      icon: Activity,
+      tone: "green",
+    },
+  ];
+
+  const toneStyles: Record<string, string> = {
+    red: "from-red-50 to-red-100 border-red-200 text-red-700",
+    green: "from-green-50 to-green-100 border-green-200 text-green-700",
+    blue: "from-blue-50 to-blue-100 border-blue-200 text-blue-700",
+    amber: "from-yellow-50 to-yellow-100 border-yellow-200 text-yellow-700",
+  };
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
       {cards.map((card, i) => {
