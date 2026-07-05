@@ -12,8 +12,8 @@ export default function LoginPage() {
 
         <div className="max-w-md text-center">
 
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#F7F3EC]">
-            <ShieldCheck className="text-[#26282D]" size={40} />
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[#F7F3EC] overflow-hidden shadow-lg p-2">
+            <img src="/logo.png" alt="Aegis Analytics Logo" className="w-full h-full object-cover" />
           </div>
 
           <h1 className="mt-8 text-5xl font-bold text-white">
