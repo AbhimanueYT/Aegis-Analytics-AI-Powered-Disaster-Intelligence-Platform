@@ -1,0 +1,14 @@
+# Ignore local build and virtual environments from Cloud Build upload
+.git
+.gcloudignore
+.venv/
+venv/
+node_modules/
+.next/
+.vercel/
+backend/database/aegis.db
+ai/data/chroma_db/
+.env
+.env.local
+.env.*.local
+*.db
