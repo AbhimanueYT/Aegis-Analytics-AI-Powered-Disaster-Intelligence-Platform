@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from backend.api import disaster
+from fastapi.middleware.cors import CORSMiddleware
+from backend.api import disaster, prediction
 
 app = FastAPI(
     title="Aegis Analytics API",
@@ -7,7 +8,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Enable CORS for frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for hackathon simplicity; specify actual origins in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(disaster.router)
+app.include_router(prediction.router)
 
 @app.get("/")
 def home():
