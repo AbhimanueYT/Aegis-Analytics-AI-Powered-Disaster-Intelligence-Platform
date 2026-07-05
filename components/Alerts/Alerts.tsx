@@ -7,46 +7,27 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const alerts = [
-  {
-    id: 1,
-    title: "Severe Flood Warning",
-    location: "Hyderabad, Telangana",
-    severity: "Critical",
-    time: "5 mins ago",
-    color: "bg-red-500/20 text-red-400",
-    icon: "bg-red-500",
-  },
-  {
-    id: 2,
-    title: "Cyclone Alert",
-    location: "Chennai, Tamil Nadu",
-    severity: "High",
-    time: "18 mins ago",
-    color: "bg-orange-500/20 text-orange-400",
-    icon: "bg-orange-500",
-  },
-  {
-    id: 3,
-    title: "Wildfire Detected",
-    location: "Bengaluru, Karnataka",
-    severity: "Moderate",
-    time: "42 mins ago",
-    color: "bg-yellow-500/20 text-yellow-400",
-    icon: "bg-yellow-500",
-  },
-  {
-    id: 4,
-    title: "Earthquake Tremors",
-    location: "Delhi NCR",
-    severity: "Low",
-    time: "1 hour ago",
-    color: "bg-green-500/20 text-green-400",
-    icon: "bg-green-500",
-  },
-];
+import { useState, useEffect } from "react";
+import { fetchAlerts, AlertData } from "@/app/services/api";
+
+const severityColors: Record<string, { bg: string, text: string, iconBg: string }> = {
+  Critical: { bg: "bg-red-500/20", text: "text-red-400", iconBg: "bg-red-500" },
+  High: { bg: "bg-orange-500/20", text: "text-orange-400", iconBg: "bg-orange-500" },
+  Moderate: { bg: "bg-yellow-500/20", text: "text-yellow-400", iconBg: "bg-yellow-500" },
+  Low: { bg: "bg-green-500/20", text: "text-green-400", iconBg: "bg-green-500" },
+};
 
 export default function Alerts({ limit }: { limit?: number }) {
+  const [alerts, setAlerts] = useState<AlertData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAlerts().then((data) => {
+      setAlerts(data);
+      setLoading(false);
+    });
+  }, []);
+
   const displayAlerts = limit ? alerts.slice(0, limit) : alerts;
 
   return (
@@ -77,53 +58,55 @@ export default function Alerts({ limit }: { limit?: number }) {
       {/* Alerts List */}
       <div className="space-y-4">
 
-        {displayAlerts.map((alert) => (
-          <div
-            key={alert.id}
-            className="rounded-2xl bg-[#26282D] border border-[#40444D] p-5 hover:border-[#F7F3EC] transition"
-          >
+        {loading ? (
+          <div className="text-gray-400 text-center py-6">Loading active alerts...</div>
+        ) : displayAlerts.length === 0 ? (
+          <div className="text-gray-400 text-center py-6">No active alerts reported.</div>
+        ) : (
+          displayAlerts.map((alert) => {
+            const styles = severityColors[alert.severity] || severityColors.Low;
+            return (
+              <div
+                key={alert.id}
+                className="rounded-2xl bg-[#26282D] border border-[#40444D] p-5 hover:border-[#F7F3EC] transition"
+              >
+                <div className="flex justify-between gap-4">
+                  {/* Left */}
+                  <div className="flex gap-4">
+                    <div
+                      className={`h-11 w-11 rounded-xl ${styles.iconBg} flex items-center justify-center`}
+                    >
+                      <AlertTriangle className="text-white" size={20} />
+                    </div>
 
-            <div className="flex justify-between gap-4">
+                    <div>
+                      <h3 className="text-white font-semibold">
+                        {alert.title}
+                      </h3>
 
-              {/* Left */}
-              <div className="flex gap-4">
+                      <div className="flex items-center gap-2 mt-2 text-gray-400 text-sm">
+                        <MapPin size={14} />
+                        {alert.location}
+                      </div>
 
-                <div
-                  className={`h-11 w-11 rounded-xl ${alert.icon} flex items-center justify-center`}
-                >
-                  <AlertTriangle className="text-white" size={20} />
-                </div>
-
-                <div>
-
-                  <h3 className="text-white font-semibold">
-                    {alert.title}
-                  </h3>
-
-                  <div className="flex items-center gap-2 mt-2 text-gray-400 text-sm">
-                    <MapPin size={14} />
-                    {alert.location}
+                      <div className="flex items-center gap-2 mt-1 text-gray-500 text-xs">
+                        <Clock3 size={14} />
+                        {alert.time}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-1 text-gray-500 text-xs">
-                    <Clock3 size={14} />
-                    {alert.time}
-                  </div>
-
+                  {/* Right */}
+                  <span
+                    className={`h-fit px-3 py-1 rounded-full text-xs font-semibold ${styles.bg} ${styles.text}`}
+                  >
+                    {alert.severity}
+                  </span>
                 </div>
               </div>
-
-              {/* Right */}
-              <span
-                className={`h-fit px-3 py-1 rounded-full text-xs font-semibold ${alert.color}`}
-              >
-                {alert.severity}
-              </span>
-
-            </div>
-
-          </div>
-        ))}
+            );
+          })
+        )}
 
       </div>
     </section>

@@ -1,45 +1,62 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
-import { AlertTriangle } from "lucide-react";
+import { fetchAlerts, fetchShelters } from "@/app/services/api";
+import { AlertTriangle, Home } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
-const disasters = [
-  {
-    id: 1,
-    name: "Flood",
-    city: "Hyderabad",
-    position: [17.385, 78.4867],
-    color: "#ef4444",
-    severity: "High",
-  },
-  {
-    id: 2,
-    name: "Cyclone",
-    city: "Chennai",
-    position: [13.0827, 80.2707],
-    color: "#f59e0b",
-    severity: "Moderate",
-  },
-  {
-    id: 3,
-    name: "Earthquake",
-    city: "Delhi",
-    position: [28.6139, 77.209],
-    color: "#8b5cf6",
-    severity: "Critical",
-  },
-  {
-    id: 4,
-    name: "Wildfire",
-    city: "Bengaluru",
-    position: [12.9716, 77.5946],
-    color: "#22c55e",
-    severity: "Low",
-  },
-];
+interface MapMarker {
+  id: string;
+  name: string;
+  city: string;
+  position: [number, number];
+  color: string;
+  severity: string;
+  isShelter: boolean;
+  details?: string;
+}
+
+const severityColors: Record<string, string> = {
+  Critical: "#ef4444", // Red
+  High: "#f97316",     // Orange
+  Moderate: "#eab308", // Yellow
+  Low: "#a855f7",      // Purple
+};
 
 export default function DisasterMap() {
+  const [markers, setMarkers] = useState<MapMarker[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([fetchAlerts(), fetchShelters()]).then(([alerts, shelters]) => {
+      const mappedAlerts: MapMarker[] = alerts.map((a: any) => ({
+        id: `alert-${a.id}`,
+        name: a.title,
+        city: a.location,
+        position: [a.latitude || 17.385, a.longitude || 78.4867],
+        color: severityColors[a.severity] || "#ef4444",
+        severity: a.severity,
+        isShelter: false,
+        details: a.details,
+      }));
+
+      const mappedShelters: MapMarker[] = shelters.map((s: any) => ({
+        id: `shelter-${s.id}`,
+        name: s.name,
+        city: s.location,
+        position: [s.latitude || 17.395, s.longitude || 78.4967],
+        color: "#22c55e", // Green
+        severity: s.status,
+        isShelter: true,
+        details: `Capacity: ${s.capacity} | Available: ${s.available}`,
+      }));
+
+      setMarkers([...mappedAlerts, ...mappedShelters]);
+      setLoading(false);
+    });
+  }, []);
+
   return (
     <div className="bg-[#32353B] rounded-3xl p-6 border border-[#40444D]">
 
@@ -77,11 +94,11 @@ export default function DisasterMap() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {disasters.map((item) => (
+          {markers.map((item) => (
             <CircleMarker
               key={item.id}
-              center={item.position as [number, number]}
-              radius={12}
+              center={item.position}
+              radius={item.isShelter ? 10 : 12}
               pathOptions={{
                 color: item.color,
                 fillColor: item.color,
@@ -89,32 +106,38 @@ export default function DisasterMap() {
               }}
             >
               <Popup>
-
                 <div className="space-y-2">
-
                   <div className="flex items-center gap-2">
-
-                    <AlertTriangle
-                      size={18}
-                      className="text-red-500"
-                    />
-
-                    <h3 className="font-bold">
+                    {item.isShelter ? (
+                      <Home
+                        size={18}
+                        className="text-green-500"
+                      />
+                    ) : (
+                      <AlertTriangle
+                        size={18}
+                        className="text-red-500"
+                      />
+                    )}
+                    <h3 className="font-bold text-gray-800">
                       {item.name}
                     </h3>
-
                   </div>
 
-                  <p>
+                  <p className="text-gray-600 text-sm">
                     <strong>Location:</strong> {item.city}
                   </p>
 
-                  <p>
-                    <strong>Severity:</strong> {item.severity}
+                  <p className="text-gray-600 text-sm">
+                    <strong>{item.isShelter ? "Status" : "Severity"}:</strong> {item.severity}
                   </p>
 
+                  {item.details && (
+                    <p className="text-gray-500 text-xs italic">
+                      {item.details}
+                    </p>
+                  )}
                 </div>
-
               </Popup>
             </CircleMarker>
           ))}
