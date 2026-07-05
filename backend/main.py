@@ -6,7 +6,7 @@ from backend.database.connection import init_db
 app = FastAPI(
     title="Aegis Analytics API",
     description="Backend API for Disaster Intelligence Platform",
-    version="1.0.0"
+    version="1.0"
 )
 
 @app.on_event("startup")
@@ -17,7 +17,7 @@ def startup_event():
 # Enable CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for hackathon simplicity; specify actual origins in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,11 +29,11 @@ app.include_router(prediction.router)
 @app.get("/")
 def home():
     return {
-        "message": "Welcome to Aegis Analytics Backend"
+        "message": "Welcome to Aegis Analytics"
     }
 
 @app.get("/health")
 def health():
     return {
-        "status": "Backend Running Successfully"
+        "status": "Running"
     }
