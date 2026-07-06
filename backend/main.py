@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.api import disaster, prediction
+from backend.api import disaster, disasters, prediction
 from backend.database.connection import init_db
 
 app = FastAPI(
@@ -18,12 +18,13 @@ def startup_event():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(disaster.router)
+app.include_router(disasters.router, prefix="/api")
 app.include_router(prediction.router)
 
 @app.get("/")

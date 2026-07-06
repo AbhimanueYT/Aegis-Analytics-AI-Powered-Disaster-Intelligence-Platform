@@ -1,4 +1,4 @@
-from models.disaster import Disaster
+from backend.models.disaster import Disaster
 
 def get_disasters():
 

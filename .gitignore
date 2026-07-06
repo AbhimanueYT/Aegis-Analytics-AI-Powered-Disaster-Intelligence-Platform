@@ -1,9 +1,11 @@
 # Python
 .env
 venv/
+.venv/
 __pycache__/
 *.pyc
-ai/data/chroma_db/
+*.db
+ai/rag/chroma_db/
 *.zip
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
@@ -40,6 +42,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel

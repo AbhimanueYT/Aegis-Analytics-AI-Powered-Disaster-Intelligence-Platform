@@ -3,7 +3,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from backend.database.models import Base, Alert, Shelter, Weather, Road, RiskTrend
 
-DATABASE_URL = "sqlite:///backend/database/aegis.db"
+# Use writeable /tmp/ directory in Cloud Run to prevent read-only filesystem crash
+if os.getenv("K_SERVICE"):
+    DATABASE_URL = "sqlite:////tmp/aegis.db"
+else:
+    DATABASE_URL = "sqlite:///backend/database/aegis.db"
 
 # Create database directories if they do not exist
 os.makedirs(os.path.dirname(DATABASE_URL.replace("sqlite:///", "")), exist_ok=True)

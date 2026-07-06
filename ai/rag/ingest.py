@@ -12,7 +12,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 
-from ai.rag.vector_store import get_vector_store
+from ai.rag.vector_store import reset_vector_store
 
 
 EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
@@ -32,6 +32,12 @@ _BROKEN_WORD_RE = re.compile(r"\b\w{1,2}(?:[ \t]\w){2,}\b")
 _WHITESPACE_RE = re.compile(r"[ \t]+")
 _BLANK_LINES_RE = re.compile(r"\n\s*\n+")
 
+# PDF line-wrap hyphenation, e.g. "Re-\nsponse" -> "Response". A line only ever
+# wraps at the hyphen itself, so this also matches genuine hyphenated
+# compounds like "techno-\neconomically" - _dehyphenate below uses a
+# dictionary check to tell the two cases apart.
+_HYPHEN_LINEBREAK_RE = re.compile(r"(\w+)-\n(\w+)")
+
 
 def _rejoin_broken_word(match: "re.Match") -> str:
     merged = match.group(0).replace(" ", "").replace("\t", "")
@@ -41,11 +47,25 @@ def _rejoin_broken_word(match: "re.Match") -> str:
     return " ".join(wordninja.split(merged))
 
 
+def _dehyphenate(match: "re.Match") -> str:
+    left, right = match.group(1), match.group(2)
+    joined = left + right
+    # If the dictionary recognizes the joined form as one word, the hyphen
+    # was just a line-wrap artifact ("Re-sponse" -> "Response"). Otherwise
+    # it's a genuine hyphenated compound ("techno-economically") - keep it.
+    if wordninja.split(joined) == [joined]:
+        return joined
+    return f"{left}-{right}"
+
+
 def clean_extracted_text(text: str) -> str:
     """Fix OCR/PDF extraction spacing artifacts without altering content."""
 
     if not text:
         return text
+
+    # Join line-wrap hyphenation: "Re-\nsponse" -> "Response"
+    text = _HYPHEN_LINEBREAK_RE.sub(_dehyphenate, text)
 
     # Collapse "Di S a S t e r" -> "Disaster" (letters split by single spaces)
     text = _BROKEN_WORD_RE.sub(_rejoin_broken_word, text)
@@ -64,7 +84,9 @@ def clean_extracted_text(text: str) -> str:
 
 def ingest_documents():
 
-    collection = get_vector_store()
+    # Rebuild the collection from scratch each run so re-ingesting the same
+    # folder never leaves stale/duplicate chunks behind.
+    collection = reset_vector_store()
 
     folder = "ai/rag/documents"
 
