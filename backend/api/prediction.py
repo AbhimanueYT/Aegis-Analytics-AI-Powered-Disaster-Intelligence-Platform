@@ -30,6 +30,15 @@ except Exception as e:
     print(f"Warning: Failed to initialize ChromaDB retriever: {e}")
     retriever = None
 
+# Configure Vertex AI GeminiService (Teammate's update)
+try:
+    from ai.rag.gemini_service import GeminiService
+    gemini_service = GeminiService()
+    print("Successfully initialized Vertex AI GeminiService.")
+except Exception as e:
+    print(f"Warning: Failed to initialize Vertex AI GeminiService: {e}. Falling back to AI Studio...")
+    gemini_service = None
+
 # Configure Gemini
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 if gemini_api_key:
@@ -102,34 +111,53 @@ def chat_rag(input_data: ChatInput):
             context_blocks.append(f"Source: {doc['source']} (Page {doc['page']})\nContent: {doc['text']}")
         context = "\n\n---\n\n".join(context_blocks)
         
-        # 3. Generate response using Gemini if key is provided
+        # 3. Generate response using Vertex AI GeminiService if configured, otherwise fallback to AI Studio
         ai_response = ""
         used_gemini = False
         
-        if gemini_api_key:
+        if gemini_service:
             try:
-                model = genai.GenerativeModel("gemini-2.5-flash")
-                prompt = (
-                    "You are Aegis AI, the intelligent disaster management assistant for Aegis Analytics.\n"
-                    "Use the following retrieved official disaster guidelines and context to answer the user's question.\n"
-                    "Provide a professional, clear, action-oriented, and structured response.\n"
-                    "If the context doesn't contain the answer, use your pre-trained knowledge on emergency management "
-                    "to provide general guidance, but clearly state that it is general advice.\n\n"
-                    f"Context:\n{context}\n\n"
-                    f"User Question: {input_data.question}\n"
-                    "Answer:"
+                # Format contexts to match schema expected by GeminiService
+                retrieved_context_dict = []
+                for r in search_results:
+                    retrieved_context_dict.append({
+                        "text": r["text"],
+                        "source": r["source"],
+                        "page": r["page"]
+                    })
+                ai_response = gemini_service.generate_answer(
+                    question=input_data.question,
+                    retrieved_context=retrieved_context_dict
                 )
-                response = model.generate_content(prompt)
-                ai_response = response.text
                 used_gemini = True
             except Exception as e:
-                ai_response = f"Error generating response from Gemini API: {str(e)}"
-        else:
-            ai_response = (
-                "Gemini API is not configured on the backend. "
-                "Here are the relevant sections retrieved from the disaster management guidelines:\n\n" + 
-                "\n\n".join([f"- From {r['source']} (Page {r['page']}): {r['text']}" for r in search_results])
-            )
+                print(f"Vertex AI GeminiService call failed: {e}. Falling back to AI Studio...")
+                
+        if not used_gemini:
+            if gemini_api_key:
+                try:
+                    model = genai.GenerativeModel("gemini-2.5-flash")
+                    prompt = (
+                        "You are Aegis AI, the intelligent disaster management assistant for Aegis Analytics.\n"
+                        "Use the following retrieved official disaster guidelines and context to answer the user's question.\n"
+                        "Provide a professional, clear, action-oriented, and structured response.\n"
+                        "If the context doesn't contain the answer, use your pre-trained knowledge on emergency management "
+                        "to provide general guidance, but clearly state that it is general advice.\n\n"
+                        f"Context:\n{context}\n\n"
+                        f"User Question: {input_data.question}\n"
+                        "Answer:"
+                    )
+                    response = model.generate_content(prompt)
+                    ai_response = response.text
+                    used_gemini = True
+                except Exception as e:
+                    ai_response = f"Error generating response from Gemini API: {str(e)}"
+            else:
+                ai_response = (
+                    "Gemini API is not configured on the backend. "
+                    "Here are the relevant sections retrieved from the disaster management guidelines:\n\n" + 
+                    "\n\n".join([f"- From {r['source']} (Page {r['page']}): {r['text']}" for r in search_results])
+                )
             
         return {
             "answer": ai_response,
