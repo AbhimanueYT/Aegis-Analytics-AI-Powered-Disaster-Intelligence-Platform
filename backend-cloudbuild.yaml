@@ -2,9 +2,9 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
-      '-t', 'gcr.io/aegis-analytics-501521/backend-api',
+      '-t', 'gcr.io/$PROJECT_ID/backend-api',
       '-f', 'backend/Dockerfile',
       '.'
     ]
 images:
-  - 'gcr.io/aegis-analytics-501521/backend-api'
+  - 'gcr.io/$PROJECT_ID/backend-api'
